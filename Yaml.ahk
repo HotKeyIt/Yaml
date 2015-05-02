@@ -84,9 +84,12 @@
 			_VAL:=Yaml_UnQuoteIfNeed(_VAL)
     ;determine current level
     _LVL:=Yaml_S2I(_LVL)
-    If (_LVL-__LVL>(__SEQ?2:1) ||(_LVL>__LVL&&_LVLChanged)) ;&&!(__SEQ&&__KEY!=""&&_KEY!=""))
-      _LVL:=__LVL+1+(__SEQ?1:0),_LVLChanged:=_LVL ;__LVL%_LVL%:=__LVL%_NXT%
-    else if _LVLChanged
+    If (_LVL-__LVL>1 ||(_LVL>__LVL&&_LVLChanged)) ;&&!(__SEQ&&__KEY!=""&&_KEY!="")) ; (__SEQ?2:1)
+    {
+      Loop % _LVL-__LVL-1
+        LoopField:=SubStr(LoopField,SubStr(LoopField,1,1)=A_Tab?1:2)
+      _LVL:=__LVL+1,_LVLChanged:=_LVL ;__LVL%_LVL%:=__LVL%_NXT% ; (__SEQ?2:1)
+    } else if _LVLChanged
       _LVL:=_LVLChanged
     else _LVLChanged:=0
     If (maxLVL<_LVL)
