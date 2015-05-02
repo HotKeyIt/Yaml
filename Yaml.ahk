@@ -1,4 +1,4 @@
-﻿Yaml(YamlText,IsFile:=1,YamlObj:=0){ ; Version 1.0.0.14 http://www.autohotkey.com/forum/viewtopic.php?t=70559
+﻿Yaml(YamlText,IsFile:=1,YamlObj:=0){ ; Version 1.0.0.15 http://www.autohotkey.com/forum/viewtopic.php?t=70559
   static
   static BackupVars:="LVL,SEQ,KEY,SCA,TYP,VAL,CMT,LFL,CNT",IncompleteSeqMap
   local maxLVL:=0,LastContObj:=0,LastContKEY:=0,LinesAdded:=0,_LVLChanged:=0
