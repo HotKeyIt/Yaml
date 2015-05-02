@@ -1,0 +1,12 @@
+No idea what Yaml is, learn Yaml in 5 minutes: http://yaml.codeplex.com/wikipage?title=Yaml%20in%205%20minutes
+
+I have tried to keep Yaml 1.2 format http://www.yaml.org/spec/1.2/spec.html
+
+Though there are some things that I have changed and some do not work:
+
+  - Tab character can be used to intend text as well as 2 spaces.
+  - Keys and sequence are allowed on same level.
+    - Sequence is saved in Object[""]
+    - That way we can have digit keys beside integers: "1": "value"
+      - One drawback is that JSON does not support it, so when Yaml is dumped to JSON, key/value map becomes a sequence object
+  - !!Type is currently not implemented and ignored
