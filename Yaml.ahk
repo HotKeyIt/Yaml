@@ -1,4 +1,4 @@
-﻿Yaml(YamlText,IsFile=1,YamlObj=0){ ; Version 1.0.0.13 http://www.autohotkey.com/forum/viewtopic.php?t=70559
+﻿Yaml(YamlText,IsFile=1,YamlObj=0){ ; Version 1.0.0.14 http://www.autohotkey.com/forum/viewtopic.php?t=70559
   static
   static base:={Dump:"Yaml_Dump",Save:"Yaml_Save",Add:"Yaml_Add",Merge:"Yaml_Merge",__Delete:"__Delete",_Insert:"_Insert",_Remove:"_Remove",_GetCapacity:"_GetCapacity",_SetCapacity:"_SetCapacity",_GetAddress:"_GetAddress",_MaxIndex:"_MaxIndex",_MinIndex:"_MinIndex",_NewEnum:"_NewEnum",_HasKey:"_HasKey",_Clone:"_Clone",Insert:"Insert",Remove:"Remove",GetCapacity:"GetCapacity",SetCapacity:"SetCapacity",GetAddress:"GetAddress",MaxIndex:"MaxIndex",MinIndex:"MinIndex",NewEnum:"NewEnum",HasKey:"HasKey",Clone:"Clone",base:{__Call:"Yaml_Call"}}
   static BackupVars:="LVL,SEQ,KEY,SCA,TYP,VAL,CMT,LFL,CNT",IncompleteSeqMap
