@@ -1,4 +1,4 @@
-﻿Yaml(YamlText,IsFile:=1,YamlObj:=0){ ; Version 1.0.0.16 http://www.autohotkey.com/forum/viewtopic.php?t=70559
+﻿Yaml(YamlText,IsFile:=1,YamlObj:=0){ ; Version 1.0.0.17 http://www.autohotkey.com/forum/viewtopic.php?t=70559
   static
   static BackupVars:="LVL,SEQ,KEY,SCA,TYP,VAL,CMT,LFL,CNT",IncompleteSeqMap
   local maxLVL:=0,LastContObj:=0,LastContKEY:=0,LinesAdded:=0,_LVLChanged:=0
@@ -8,12 +8,12 @@
   LoopParse,%YamlText%,`n,`r
   {
     If !_CNT&&(A_LoopField=""||RegExMatch(A_LoopField,"^\s+$")){ ;&&__KEY=""&&__SEQ="")){
-			If ((OBJ:=LVL%__LVL%[""])&&ObjLength(obj))&&IsObject(LVL%__LVL%["",OBJ])&&__SEQ{
+			If ((OBJ:=LVL%__LVL%[""])&&OBJ:=ObjLength(obj))&&IsObject(LVL%__LVL%["",OBJ])&&__SEQ{
 				If __KEY!=""
 					Yaml_Continue(LastContObj:=LVL%__LVL%["",Obj],LastContKEY:=__key,"",__SCA)
 				else Yaml_Continue(LastContObj:=LVL%__LVL%[""],LastContKEY:=Obj,"",__SCA,__SEQ)
 			} else If __SEQ&&OBJ{
-				Yaml_Continue(LastContObj:=LVL%__LVL%[""],LastContKEY:=Obj,"",__SCA,__SEQ)
+				Yaml_Continue(LastContObj:=LVL%__LVL%[""],LastContKEY:=OBJ,"",__SCA,__SEQ)
 			} else If OBJ{
 				Yaml_Continue(LastContObj:=LVL%__LVL%[""],LastContKEY:=OBJ,"",__SCA,1)
 			} else if __KEY!=""
@@ -439,12 +439,12 @@ Yaml_I2S(idx){
 }
 Yaml_Continue(Obj,key,value,scalar:="",isval:=0){
   If !IsObject(isObj:=obj[key])
-    v:=IsObject(isObj)?"":isObj
+    v:=isObj
   If scalar{
     scaopt:=SubStr(scalar,2)
     scalar:=Ord(scalar)=124?"`n":" "
   } else scalar:=" ",scaopt:="-"
-  temp := (value=""?"`n":(SubStr(v,0)="`n"&&scalar="`n"?"":(v=""?"":scalar))) value (scaopt!="-"?(v&&value=""?"`n":""):"")
+  temp := (value=""?"`n":(SubStr(v,-1)="`n"&&scalar="`n"?"":(v=""?"":scalar))) value (scaopt!="-"?(v&&value=""?"`n":""):"")
   obj[key]:=Yaml_UnQuoteIfNeed(v temp)
 }
 Yaml_Quote(ByRef L,F,Q,B,ByRef E){
