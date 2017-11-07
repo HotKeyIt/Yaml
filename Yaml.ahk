@@ -1,6 +1,7 @@
-﻿Yaml(YamlText,IsFile:=1,YamlObj:=0){ ; Version 1.0.0.17 http://www.autohotkey.com/forum/viewtopic.php?t=70559
+﻿Yaml(YamlText,IsFile:=1,YamlObj:=0){ ; Version 1.0.0.18 http://www.autohotkey.com/forum/viewtopic.php?t=70559
   static
-  static BackupVars:="LVL,SEQ,KEY,SCA,TYP,VAL,CMT,LFL,CNT",IncompleteSeqMap
+  static base:={Dump:"Yaml_Dump",Save:"Yaml_Save",Add:"Yaml_Add",Merge:"Yaml_Merge",Delete:"Delete",Push:"Push",Pop:"Pop",GetCapacity:"GetCapacity",SetCapacity:"SetCapacity",GetAddress:"GetAddress",MaxIndex:"MaxIndex",MinIndex:"MinIndex",Count:"Count",__NewEnum:"__NewEnum",HasKey:"HasKey",Clone:"Clone",InsertAt:"InsertAt",RemoveAt:"RemoveAt",GetCapacity:"GetCapacity",SetCapacity:"SetCapacity",GetAddress:"GetAddress",NewEnum:"NewEnum"}
+  static BackupVars:="LVL,SEQ,KEY,SCA,TYP,VAL,CMT,LFL,CNT",IncompleteSeqMap:="",_CNT:="",__SCA0:="",__SCA:="",__SEQ:="",__SEQ0:="",__KEY:="",__KEY0:="",__TYP0:="",__VAL0:="",_CMT:="",__CMT0:="",__CNT0:="",__LFL0:=""
   local maxLVL:=0,LastContObj:=0,LastContKEY:=0,LinesAdded:=0,_LVLChanged:=0
   LVL0:=pYaml:=YamlObj?YamlObj:Object("base",base),__LVL:=0,__LVL0:=0
   If IsFile
@@ -346,6 +347,7 @@ Yaml_Dump(O,J:="",R:=0,Q:=0){
 }
 Yaml_UniChar(string){
   static a:="`a",b:="`b",t:="`t",n:="`n",v:="`v",f:="`f",r:="`r",e:=Chr(0x1B)
+  var:="",lastempty:=0
   Loop Parse, string,"\"
   {
     If A_Index=1{
@@ -386,6 +388,7 @@ Yaml_UniChar(string){
 }
 Yaml_CharUni(string){
   static ascii:={"\":"\","`a": "a","`b": "b","`t": "t","`n": "n","`v": "v","`f": "f","`r": "r",Chr(0x1B): "e","`"": "`"",Chr(0x85): "N",Chr(0x2029): "P",Chr(0x2028): "L","": "0",Chr(0xA0): "_"}
+  var:=""
   If !RegexMatch(string,"[\x{007F}-\x{FFFF}]"){
     Loop Parse, string
     {
@@ -433,6 +436,7 @@ Yaml_S2I(str){
   Return idx
 }
 Yaml_I2S(idx){
+  str:=""
   Loop idx
     str .= "  "
   Return str
