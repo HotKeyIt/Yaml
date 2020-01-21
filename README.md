@@ -12,12 +12,12 @@ Though there are some things that I have changed and some do not work:
 
 How to use:
   Create an Object from Text or File:
-    `YamlObj:=Yaml(TextOrFilePath)
+    `YamlObj:=Yaml(TextOrFilePath)`
   Apply/combine another Yaml document into existing object:
-    `Yaml(TextOrFilePath, YamlObject)
+    `Yaml(TextOrFilePath, YamlObject)`
   Dump Yaml object back to text, use JSON from 5-th level only:
-    `Yaml(YamlObject, 5)
+    `Yaml(YamlObject, 5)`
   Dump Yaml object back to text, use JSON only and indent until 5-th level (v1.0.4++):
-    `Yaml(YamlObject, -5)
+    `Yaml(YamlObject, -5)`
   Yaml(TextOrFilePath) will result in Array of documents (objects), if you have only one document you can retrieve it directly:
-    `YamlObj:=Yaml(TextOrFilePath)[1]
+    `YamlObj:=Yaml(TextOrFilePath)[1]`
