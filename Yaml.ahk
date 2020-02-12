@@ -134,7 +134,7 @@ MsgBox Yaml(Y,-5)
 MsgBox Yaml(Map("test",1,"try","hand"),-5)
 */
 
-;Yaml v1.0.6 requires AutoHotkey v2.106+
+;Yaml v1.0.7 requires AutoHotkey v2.106+
 Yaml(ByRef TextFileObject,Yaml:=0){
   If IsObject(TextFileObject)
     return D(TextFileObject,Yaml) ; dump object to yaml string
@@ -305,7 +305,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
           F:=IsObject(value)?(Type(value)="Array"?"S":"M"):E
 		Z:=Type(value)="Array"&&value.Length=0?"[]":((Type(value)="Map"&&value.count=0)||(Type(value)="Object"&&ObjOwnPropCount(value)=0))?"{}":""
         If J<=R
-          D.=(J<R*-1?"`n" I(R+2):"") (Q="S"&&A_Index=1?M1:E) (J<1?'"' E(key) '"':E(key)) K (F?(%F%1 (Z?"":H(value,J,R+1,F)) %F%2): E(value)) (Q="S"&&A_Index=(Y?O.count:ObjOwnPropCount(O))?M2:E) (J!=0||R?(A_Index=(Y?O.count:ObjOwnPropCount(O))?E:C):E)
+          D.=(J<R*-1?"`n" I(R+2):"") (Q="S"&&A_Index=1?M1:E) (J<1?'"' E(key) '"':E(key)) K (F?(%F%1 (Z?"":H(value,J,R+1,F)) %F%2): E(value,J)) (Q="S"&&A_Index=(Y?O.count:ObjOwnPropCount(O))?M2:E) (J!=0||R?(A_Index=(Y?O.count:ObjOwnPropCount(O))?E:C):E)
         else If ((D:=D N I(R+1) E(key) K)||1)&&F
           D.= Z?Z:(J<=(R+1)?%F%1:E) H(value,J,R+1,F) (J<=(R+1)?%F%2:E)
         else D .= E(value, J)
