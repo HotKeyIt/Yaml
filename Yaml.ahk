@@ -134,7 +134,7 @@ MsgBox Yaml(Y,-5)
 MsgBox Yaml(Map("test",1,"try","hand"),-5)
 */
 
-;Yaml v1.0.7 requires AutoHotkey v2.106+
+;Yaml v1.0.8 requires AutoHotkey v2.106+
 Yaml(ByRef TextFileObject,Yaml:=0){
   If IsObject(TextFileObject)
     return D(TextFileObject,Yaml) ; dump object to yaml string
@@ -163,11 +163,11 @@ Yaml(ByRef TextFileObject,Yaml:=0){
           If D[L].Length && IsObject(VC:=D[L].Pop()) && MsgBox("Error: Malformed inline YAML string") ; Error if previous value is an object
             Exit
           else D[L].Push(VC (VC?(_S=">"?" ":"`n"):"") _CE:=LTrim(LF,"`t ")) ; append value to previous item
-        } else if IsObject(VC:=D[L].%K%) && MsgBox("Error: Malformed inline YAML string") ; Error if previous value is an object
+        } else if IsObject(VC:=D[L][K]) && MsgBox("Error: Malformed inline YAML string") ; Error if previous value is an object
           Exit
-        else D[L].%K%:=VC (VC?(_S=">"?" ":"`n"):"") _CE:=LTrim(LF,"`t ") ; append value to previous item
+        else D[L][K]:=VC (VC?(_S=">"?" ":"`n"):"") _CE:=LTrim(LF,"`t ") ; append value to previous item
           continue
-      } else if _C&&(SubStr(_CE,-1)!=_C)&&MsgBox("Error: unexpected character near`n" (_Q?D[L][D[L].Length]:D[L].%K%)) ; else check if quoted value was ended with a quote
+      } else if _C&&(SubStr(_CE,-1)!=_C)&&MsgBox("Error: unexpected character near`n" (_Q?D[L][D[L].Length]:D[L][K])) ; else check if quoted value was ended with a quote
         Exit
       else _C:="" ; reset continuation
       If (CM:=InStr(LF," #"))&&!RegExMatch(LF,".*[`"'].*\s\#.*[`"'].*") ; check for comments and remove
@@ -189,7 +189,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       else if !K&&V&&!Q ; only a value is catched, convert to key
         K:=V,V:=""
       If !Q&&SubStr(RTrim(K," `t"),-1)!=":" ; not a sequence and key is missing :
-        if L>_L&&(D[_L].%_K%:=K,LL:=_LL,L:=_L,K:=_K,Q:=_Q,_S:=">")
+        if L>_L&&(D[_L][_K]:=K,LL:=_LL,L:=_L,K:=_K,Q:=_Q,_S:=">")
           continue
         else (MsgBox("Error, invalid key:`n" LF),Exit())
       else if K!="" ; trim key if not empty
@@ -202,13 +202,13 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         if L=1{ ; first level, use or create main object
           if Y&&Type(Y[Y.Length])!="String"&&((Q&&Type(Y[Y.Length])!="Array")||(!Q&&Type(Y[Y.Length])="Array"))&&MsgBox("Mapping Item and Sequence cannot be defined on the same level:`n" LF) ; trying to create sequence on the same level as key or vice versa
             Exit
-          else D[L]:=Y ? (Type(Y[Y.Length])="String"?(Y[Y.Length]:=Q?[]:{}):Y[Y.Length]) : (Y:=Q?[[]]:[{}])[1]
-        } else if !_Q&&Type(D[L-1].%_K%)=(Q?"Array":"Object") ; use previous object
-          D[L]:=D[L-1].%_K%
-        else D[L]:=O:=Q?[]:{},_A?A[_A]:=O:"",_Q ? D[L-1].Push(O) : D[L-1].%_K%:=O,O:="" ; create new object
+          else D[L]:=Y ? (Type(Y[Y.Length])="String"?(Y[Y.Length]:=Q?[]:Map()):Y[Y.Length]) : (Y:=Q?[[]]:[Map()])[1]
+        } else if !_Q&&Type(D[L-1][_K])=(Q?"Array":"Object") ; use previous object
+          D[L]:=D[L-1][_K]
+        else D[L]:=O:=Q?[]:Map(),_A?A[_A]:=O:"",_Q ? D[L-1].Push(O) : D[L-1][_K]:=O,O:="" ; create new object
       _A:="" ; reset alias
       if Q&&K ; Sequence containing a key, create object
-        D[L].Push(O:={}),D[++L]:=O,Q:=O:="",LL+=1
+        D[L].Push(O:=Map()),D[++L]:=O,Q:=O:="",LL+=1
       If (Q&&Type(D[L])!="Array"||!Q&&Type(D[L])="Array")&&MsgBox("Mapping Item and Sequence cannot be defined on the same level:`n" LF) ; trying to create sequence on the same level as key or vice versa
         Exit
       if T="binary"{ ; !!binary
@@ -224,12 +224,12 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       if _.AGET
         V:=A[SubStr(_.AGET,2)]
       else If SubStr(LTrim(V," `t"),1,1)="{" ; create json map object
-        O:={},_A?A[_A]:=O:"",P:=(O(O,LP+InStr(LF,V)*2,L))
+        O:=Map(),_A?A[_A]:=O:"",P:=(O(O,LP+InStr(LF,V)*2,L))
       else if SubStr(LTrim(V," `t"),1,1)="[" ; create json sequence object
         O:=[],_A?A[_A]:=O:"",P:=(A(O,LP+InStr(LF,V)*2,L))
       if Q ; push sequence value into an object
         (V ? D[L].Push(O?O:S?"":V) : 0)
-      else D[L].%K%:=O?O:D[L].HasOwnProp(K)?D[L].%K%:S?"":V ; add key: value into object
+      else D[L][K]:=O?O:D[L].HasOwnProp(K)?D[L][K]:S?"":V ; add key: value into object
       if !Q&&V ; backup yaml elements
         _L:=L,_LL:=LL,O:=_Q:=_K:=_S:=_T:=_V:="" ;_L:=
       else _L:=L,_LL:=LL,_Q:=Q,_K:=K,_S:=S,_T:=T,_V:=V,O:=""
@@ -261,20 +261,21 @@ Yaml(ByRef TextFileObject,Yaml:=0){
   E(ByRef S, J:=1){ ; EscIfNeed: check if escaping needed and convert to unicode notation
     If S=""
       return '""'
-    else if (J<1&&!InStr("IntegerFloat",Type(value)))||RegExMatch(S,"m)[\{\[`"'\r\n]|:\s|,\s|\s#")||RegExMatch(S,"^[\s#\\\-:>]")||RegExMatch(S,"m)\s$")||RegExMatch(S,"m)[\x{7F}-\x{7FFF}]")
-      return ("`"" . C(S) . "`"")
+    else if (J<1&&!InStr("IntegerFloat",Type(S)))||RegExMatch(S,"m)[\{\[`"'\r\n]|:\s|,\s|\s#")||RegExMatch(S,"^[\s#\\\-:>]")||RegExMatch(S,"m)\s$")||RegExMatch(S,"m)[\x{7F}-\x{7FFF}]")
+      return ("`"" C(S) "`"")
     else return S
   }
   D(O:="",J:=0){ ; dump object to string
-    if Type(O)!="Array"
+    if Type(O)!="Array"||!O.Length||!IsObject(O[1])
       D.= H(O,J)
-    else if j<1
+    else if j<1 {
       for K,V in O
-        D.=H(V,J) "`n"
-    else
+        D.=H(V,J) (j<0?"`n,":",")
+      return J<0?"[`n  " StrReplace(RTrim(D,",`n"),"`n","`n  ") "`n]":"[" RTrim(D,",`n") "]"
+    } else
       for K,V in O
         D.="---`n" H(V,J) "`n"
-    return D
+    return RTrim(D,",`n")
   }
   H(O:="",J:=0,R:=0,Q:=0){ ; helper: convert object to yaml string
     static M1:="{",M2:="}",S1:="[",S2:="]",N:="`n",C:=", ",S:="- ",E:="",K:=": "
@@ -345,13 +346,13 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
         continue
-      else if !v&&k&&(c="["||c="{") && (P:=c="[" ? A(O.%key%:=[],P+2,L) : O(O.%key%:={},P+2,L),key:="",k:=0,1)
+      else if !v&&k&&(c="["||c="{") && (P:=c="[" ? A(O[key]:=[],P+2,L) : O(O[key]:=Map(),P+2,L),key:="",k:=0,1)
         continue
       else if v&&!k&&((!q&&c=":")||(q&&q=c)) && (v:=0,key:=!q && key is "number" ? key+0 : q ? (InStr(key,"\")?U(key):key) : Trim(key," `t"),k:=1,q:=0,P+=2)
         continue
-      else if v&&k&&((!q&&c=",")||(q&&q=c)) && (v:=0,O.%key%:=!q && val is "number" ? val+0 : q ? (InStr(val,"\")?U(val):val) : Trim(val," `t"),val:="",key:="",q:=0,k:=0,P+=2)
+      else if v&&k&&((!q&&c=",")||(q&&q=c)) && (v:=0,O[key]:=!q && val is "number" ? val+0 : q ? (InStr(val,"\")?U(val):val) : Trim(val," `t"),val:="",key:="",q:=0,k:=0,P+=2)
         continue
-      else if !q&&c="}"&&(k&&v?(O.%key%:=val,1):1){
+      else if !q&&c="}"&&(k&&v?(O[key]:=val,1):1){
         if ((tp:=G(P+2,lf))&&(NumGet(P+2,"UShort")=10||NumGet(P+4,"UShort")=10||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
           return nl?tp:P+2
         else if !tp
@@ -383,7 +384,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
         continue
-      else if !v&&(c="["||c="{") && (P:=c="[" ? A((O.Push(lf:=[]),lf),P+2,L) : O((O.Push(lf:={}),lf),P+2,L),lf:="",1)
+      else if !v&&(c="["||c="{") && (P:=c="[" ? A((O.Push(lf:=[]),lf),P+2,L) : O((O.Push(lf:=Map()),lf),P+2,L),lf:="",1)
         continue
       else if v&&((!q&&c=",")||(q&&c=q)) && (v:=0,O.Push(!q && lf is "number" ? lf+0 : q ? (InStr(lf,"\")?U(lf):lf) : Trim(lf," `t")),q:=0,lf:="",P+=2)
         continue
@@ -407,11 +408,11 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     Exit
   }
   J(ByRef S,Y){ ; PureJSON: convert pure JSON Object
-    D:=[C:=(A:=InStr(S,"[")=1)?[]:{}],S:=LTrim(SubStr(S,2)," `t`r`n`""),L:=1,N:=0,V:=K:="",Y?(Y.Push(C),J:=Y):J:=[C]
+    D:=[C:=(A:=InStr(S,"[")=1)?[]:Map()],S:=LTrim(SubStr(S,2)," `t`r`n`""),L:=1,N:=0,V:=K:="",Y?(Y.Push(C),J:=Y):J:=[C]
     Loop Parse, S, '"' {
       If (t:=Trim(what:=A_LoopField," `t`r`n"))=","||(t=":"&&V:=1)
         continue
-      else If t&&InStr("{[]},:",SubStr(t,1,1)){
+      else If t&&(InStr("{[]},:",SubStr(t,1,1)) || RegExMatch(t,"^\d*\s*[,\]\}]")){
         Loop Parse, t {
           if N&&N--
             continue
@@ -420,7 +421,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
           else If InStr("{[",A_LoopField){
             if !A&&!V
               return MsgBox("Error: Malformed JSON - missing key: " t)
-            C:=A_LoopField="["?[]:{},A?D[L].Push(C):D[L].%K%:=C,D.Has(++L)?D[L]:=C:D.Push(C),V:="",A:=Type(C)="Array"
+            C:=A_LoopField="["?[]:Map(),A?D[L].Push(C):D[L][K]:=C,D.Has(++L)?D[L]:=C:D.Push(C),V:="",A:=Type(C)="Array"
             continue
           } else if InStr("]}",A_LoopField){
             If !A&&V
@@ -433,7 +434,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
               if A
                 C.Push(R="null"?"":R="true"?true:R="false"?false:R+0)
               else if V
-                C.%K%:=R="null"?"":R="true"?true:R="false"?false:R+0,K:=V:=""
+                C[K]:=R="null"?"":R="true"?true:R="false"?false:R+0,K:=V:=""
               else
                 return MsgBox("Error: Malformed JSON - missing key in: " t)
             } else
@@ -441,231 +442,12 @@ Yaml(ByRef TextFileObject,Yaml:=0){
           }
         }
       } else if A
-        C.Push(A_LoopField~="^[^0]-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField)
+        C.Push(A_LoopField~="^(?!0)-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField)
       else if V
-        C.%K%:=A_LoopField~="^[^0]-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField,K:=V:=""
+        C[K]:=A_LoopField~="^(?!0)-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField,K:=V:=""
       else
-        K:=A_LoopField~="^[^0]-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField
+        K:=A_LoopField~="^(?!0)-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField
     }
-    return J
-  }
-}
-
-/*
-  ;~ Quote(ByRef L,F,Q,B,ByRef E){
-    ;~ return (F="\"&&!E&&(E:=1))||(E&&!(E:=0)&&(L:=L ("\" F)))
-  ;~ }
-Class Yaml {
-  __New(){
-    ObjRawSet(this,"_",0)
-  }
-  __Get(k,v){
-    if v
-        return this._.%k%[v*]
-    return this._.%k%
-  }
-  FromFile(file){
-    return this.Load(FileRead(file))
-  }
-  getline(p,ByRef LF:=""){
-    return !p||!NumGet(p,"UShort")?0:(str:=StrSplit(StrGet(P),"`n","`r",2)).Length?(p+=StrLen(LF:=str[1])*2,p+=!NumGet(p,"UShort") ? 0 : NumGet(p,"USHORT")=13?4:2):0
-  }
-  Load(txt){
-    P:=&txt
-    D:=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,]
-    While P:=this.getline(LP:=P,LF){
-      if LF=""||RegExMatch(LF,"^\s*#")||InStr(LF,"`%YAML")=1 ; Comments only, ignore
-        continue
-      else If (V&&(SubStr(LF,1,L*2)=this.I2S(L+(Q&&_C ? 0 : 1)))){
-        if _Q{
-          If IsObject(VC:=D[L].Pop()) && MsgBox("Error: Malformed inline YAML string")
-            Exit
-          else D[L].Push(VC "`n" _CE:=LTrim(SubStr(LF,L*2),"`t "))
-        } else if IsObject(VC:=D[L].%K%) && MsgBox("Error: Malformed inline YAML string")
-          Exit
-        else D[L].%K%:=VC "`n" _CE:=LTrim(SubStr(LF,_L*2+2),"`t ")
-        continue
-      } else if _C&&(SubStr(_CE,-1)!=_C)&&MsgBox("Error: unexpected character near`n" (_Q?D[L][D[L].Length]:D[L].%K%))
-        Exit
-      else _C:=""
-      RegExMatch(LF,"S)^(?<LVL>\s+)?(?<SEQ>-\s)?(?<KEY>`".+`"\s*:\s|'.+'\s*:\s|[^:`"'\{\[]+\s*:\s)?\s*(?<SCA>[\|\>][+-]?)?\s*(?<TYP>!!\w+\s)?\s*(?<VAL>`".+`"|'.+'|.+)?\s*$",_),L:=this.S2I(_.LVL),Q:=_.SEQ,K:=_.KEY,S:=_.SCA,T:=_.TYP,V:=this.UnQuote(_.VAL),V:= V is "Integer"?V+0:V
-      if (Trim(_.Value()," `t")="-")
-        V:="",Q:="-"
-      else if !K&&V&&!Q
-        K:=V,V:=""
-      If !Q&&SubStr(RTrim(K," "),-1)!=":"
-        return (MsgBox("Error, invalid key:`n" LF),Exit())
-      else if K!=""
-        K:=this.UnQuote(RTrim(K,": "))
-      Loop _L ? _L-L : 0
-        D[L+A_Index]:=0
-      if !InStr("'`"",_C:=SubStr(V,1,1))||_C=SubStr(V,-1)
-        _C:=""
-      if _L!=L && !D[L]
-        if L=1
-          D[L]:=this._ ? this._ : this._:=Q?[]:{}
-        else if !_Q&&Type(D[L-1].%_K%)=(Q?"Array":"Object")
-          D[L]:=D[L-1].%_K%
-        else D[L]:=O:=Q?[]:{},_Q ? D[L-1].Push(O) : D[L-1].%_K%:=O,O:=""
-      If (Q&&Type(D[L])!="Array"||!Q&&Type(D[L])="Array")&&MsgBox("Mapping Item and Sequence cannot be defined on the same level:`n" LF)
-        Exit
-      if Q&&K
-        D[L].Push(O:={}),D[++L]:=O,Q:=O:=""
-      If SubStr(V,1,1)="{"
-        P:=(this.Object(O:={},LP+InStr(LF,V)*2,L))
-      else if SubStr(V,1,1)="["
-        P:=(this.Array(O:=[],LP+InStr(LF,V)*2,L))
-      if Q
-        (V ? D[L].Push(O?O:V) : 0)
-      else D[L].%K%:=O?O:D[L].HasOwnProp(K)?D[L].%K%:V
-      if !Q&&V
-        _L:=L,O:=_Q:=_K:=_S:=_T:=_V:="" ;_L:=
-      else _L:=L,_Q:=Q,_K:=K,_S:=S,_T:=T,_V:=V,O:=""
-    }
-  }
-  UniChar(s){
-    static m:=Map("a","`a","b","`b","t","`t","n","`n","v","`v","f","`f","r","`r","e",Chr(0x1B))
-    Loop Parse (e:=0,s),"\"
-      If (e && (e:=0,v.="\" A_LoopField)) || (A_LoopField=""&&e:=1)
-        Continue
-      else v .= RegexMatch( t := (t:=InStr("ux",SubStr(A_LoopField,1,1)) ? SubStr(A_LoopField,1,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")-1) : SubStr(A_LoopField,1,1)) == "N" ? "\x85" : t == "P" ? "\x2029" : t = 0 ? "\x0" : t == "L" ? "\x2028" : t == "_" ? "\xA0" : t ,"i)^[ux][\da-f]+$") ? Chr(Abs("0x" SubStr(t,2))) : m.has(t) ? m[t] : t
-          ,v .= InStr("ux",SubStr(A_LoopField,1,1)) ? SubStr(A_LoopField,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")) : SubStr(A_LoopField,2)
-    return v
-  }
-  CharUni(s){
-    static ascii:=Map("\","\","`a","a","`b","b","`t","t","`n","n","`v","v","`f","f","`r","r",Chr(0x1B),"e","`"","`"",Chr(0x85),"N",Chr(0x2029),"P",Chr(0x2028),"L","","0",Chr(0xA0),"_")
-    If (!(v:="") && !RegexMatch(s,"[\x{007F}-\x{FFFF}]")){
-      Loop Parse, s
-        v .= ascii.Has(A_LoopField) ? "\" ascii[A_LoopField] : A_LoopField
-      return v
-    }
-    Loop Parse, s
-      v .= ascii.Has(A_LoopField) ? "\" ascii[A_LoopField] : Ord(A_LoopField)<128 ? A_LoopField : "\u" format("{1:.4X}",Ord(A_LoopField))
-    return v
-  }
-  EscIfNeed(s){
-    If s=""
-      return "''"
-    else If RegExMatch(s,"m)[\{\[`"'\r\n]|:\s|,\s|\s#")||RegExMatch(s,"^[\s#\\\-:>]")||RegExMatch(s,"m)\s$")||RegExMatch(s,"m)[\x{7F}-\x{7FFF}]"){
-      return ("`"" . this.CharUni(s) . "`"")
-    } else return s
-  }
-  Dump(J:="",O:="",R:=0,Q:=0){
-    static M1:="{",M2:="}",S1:="[",S2:="]",N:="`n",C:=", ",S:="- ",E:="",K:=": "
-    O:=O=""?this._:O
-    If type(O)="Array"{
-      dump:=J=0&&!R?S2:""
-      for key, value in O{
-        F:=IsObject(value)?(Type(value)="Array"?"S":"M"):E
-        If J!=""&&J<=R
-          dump.=(F?(%F%1 this.Dump(J,value,R+1,F) %F%2):this.EscIfNeed(value)) ((Type(O)="Array"&&O.Length=A_Index) ? E : C)
-        else if ((dump:=dump N this.I2S(R+1) S)||1)&&F
-            dump.= (J!=""&&J<=(R+1)?%F%1:E) this.Dump(J,value,R+1,F) (J!=""&&J<=(R+1)?%F%2:E)
-        else dump .= this.EscIfNeed(value)
-      }
-    } else {
-      dump:=J=0&&!R?S2:""
-      for key, value in O.OwnProps(){
-        F:=IsObject(value)?(Type(value)="Array"?"S":"M"):E
-        If J!=""&&J<=R
-          dump.=(Q="S"&&A_Index=1?M1:E) this.EscIfNeed(key) K (F?(%F%1 this.Dump(J,value,R+1,F) %F%2):this.EscIfNeed(value)) (Q="S"&&A_Index=ObjOwnPropCount(O)?M2:E) (J!=0||R?(A_Index=ObjOwnPropCount(O)?E:C):E)
-        else If ((dump:=dump N this.I2S(R+1) this.EscIfNeed(key) K)||1)&&F
-          dump.= (J!=""&&J<=(R+1)?%F%1:E) this.Dump(J,value,R+1,F) (J!=""&&J<=(R+1)?%F%2:E)
-        else dump .= this.EscIfNeed(value)
-        If J=0&&!R
-          dump.= (A_Index<ObjOwnPropCount(O)?C:E)
-      }
-    }
-    If R=0
-      dump:=RegExReplace(dump,"^\R+")
-    Return dump
-  }
-  S2I(s){
-    Loop Parse, (i:=0,s)
-      i += (A_LoopField=A_Tab||!Mod(A_index,2)) ? 1 : 0
-    Return i + 1
-  }
-  I2S(i){
-    Loop i-1
-      s .= "  "
-    Return s
-  }
-  Quote(ByRef L,F,Q,B,ByRef E){
-    return (F="\"&&!E&&(E:=1))||(E&&!(E:=0)&&(L:=L ("\" F)))
-  }
-  UnQuote(s){
-    return (t:=SubStr(s,1,1) SubStr(s,-1)) = '""' ? this.UniChar(SubStr(s,2,-1)) : t = "''" ? SubStr(s,2,-1) : s
-  }
-  Object(O,P,L){
-    v:=q:=k:=0,key:=val:=lf:=""
-    While (""!=c:=Chr(NumGet(p,"UShort")))&&(InStr("`n`r `t",c)||s:=c){
-      if c="`n"||(c="`r"&&10=NumGet(p+2,"UShort")){
-        if (tp:=this.getline(p+(c="`n"?2:4),lf)&&SubStr(lf,1,L*2)=this.I2S(L+1)) && (q||(k&&s=":")||(!v&&s=",")) && P:=tp+L*2
-          continue
-        else if MsgBox("Error: Malformed inline YAML string: " lf)
-          Exit
-      } else if !v&&(c=" "||c=A_Tab) && P+=2
-        continue
-      if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
-        continue
-      else if !v&&k&&(c="["||c="{") && (P:=c="[" ? this.Array(O.%key%:=[],P+2,L) : this.Object(O.%key%:={},P+2,L),key:="",k:=0,1)
-        continue
-      else if v&&!k&&((!q&&c=":")||(q&&q=c)) && (v:=0,key:=key is "number" ? key+0 : q ? this.UniChar(key) : key,k:=1,q:=0,P+=2)
-        continue
-      else if v&&k&&((!q&&c=",")||(q&&q=c)) && (v:=0,O.%key%:=val is "number" ? val+0 : q ? this.UniChar(val) : val,val:="",key:="",q:=0,k:=0,P+=2)
-        continue
-      else if !q&&c="}"&&(k&&v?(O.%key%:=val,1):1){
-        if ((tp:=this.getline(P+2,lf))&&(NumGet(P+2,"UShort")=10||NumGet(P+4,"UShort")=10||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
-          return nl?tp:P+2
-        else if !tp
-          return 0
-        else if MsgBox("Error: Malformed inline YAML string")
-          Exit
-      } else if !v&& InStr(",: `t",c)&&P+=2
-        continue
-      else if !v&& (!k ? (key:=c) : val:=c,v:=1,P+=2)
-        continue
-      else if v&& (!k ? (key.=c) : val.=c,P+=2)
-        continue
-      else if MsgBox("Error undefined")
-        Exit 
-    }
-    MsgBox("Error: unexpected end of YAML string")
-    Exit
-  }
-  Array(O,P,L){
-    v:=q:=c:=0,lf:=""
-    While (""!=c:=Chr(NumGet(p,"UShort")))&&(InStr("`n`r `t",c)||s:=c){
-      if c="`n"||(c="`r"&&10=NumGet(p+2,"UShort")){
-        if (tp:=this.getline(p+(c="`n"?2:4),lf)&&SubStr(lf,1,L*2)=this.I2S(L+1)) && (q||(!v&&s=",")) && P:=tp+L*2
-          continue
-        else if MsgBox("Error: Malformed inline YAML string: " lf)
-          Exit
-      } else if !v&&(c=" "||c=A_Tab) && P+=2
-        continue
-      if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
-        continue
-      else if !v&&(c="["||c="{") && (P:=c="[" ? this.Array((O.Push(lf:=[]),lf),P+2,L) : this.Object((O.Push(lf:={}),lf),P+2,L),lf:="",1)
-        continue
-      else if v&&((!q&&c=",")||(q&&c=q)) && (v:=0,O.Push(lf is "number" ? lf+0 : q ? this.UniChar(lf) : lf),q:=0,lf:="",P+=2)
-        continue
-      else if !q&&c="]"&&(v?(O.Push(lf),1):1){
-        if ((tp:=this.getline(P+2,lf))&&(NumGet(P+2,"UShort")=10||NumGet(P+4,"UShort")=10||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
-          return nl?tp:P+2
-        else if !tp
-          return 0
-        else if MsgBox("Error: Malformed inline YAML string")
-          Exit
-      } else if !v&&InStr(", `t",c)&&P+=2
-        continue
-      else if !v&& (lf.=c,v:=1,P+=2)
-        continue
-      else if v&& (lf.=c,P+=2)
-        continue
-      else if MsgBox("Error undefined")
-        Exit
-    }
-    MsgBox("Error: unexpected end of YAML string")
-    Exit
+    return J[1]
   }
 }
