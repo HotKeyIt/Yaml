@@ -134,24 +134,51 @@ MsgBox Yaml(Y,-5)
 MsgBox Yaml(Map("test",1,"try","hand"),-5)
 */
 
-;Yaml v1.0.8 requires AutoHotkey v2.106+
+;~ #include <windows.h>
+;~ WCHAR* getline(WCHAR *i, BOOL set){
+	;~ if (i==NULL || *i == L'\0')
+		;~ return 0;
+	;~ for (; *i; i++)
+	;~ {
+		;~ if (*i == L'\n')
+		;~ {
+			;~ if (set)
+				;~ *i = L'\0';
+			;~ return i + 1;
+		;~ }
+		;~ else if (*i == L'\r' && *(i + 1) == L'\n')
+		;~ {
+			;~ if (set)
+			;~ {
+				;~ *i = L'\0';
+;~ //				*(i+1) = L'\0';
+			;~ }
+			;~ return i + 2;
+		;~ }
+	;~ }
+	;~ return i;
+;~ }
+
+;Yaml v1.0.9 requires AutoHotkey v2.106+
 Yaml(ByRef TextFileObject,Yaml:=0){
   If IsObject(TextFileObject)
     return D(TextFileObject,Yaml) ; dump object to yaml string
   else If FileExist(TextFileObject)
     return L(FileRead(TextFileObject),Yaml) ; load yaml from file
   else return L(TextFileObject,Yaml) ; load object from yaml string
-  G(p,ByRef LF:=""){ ; get line and advance pointer to next line
-    return !p||!NumGet(p,"UShort")?0:(str:=StrSplit(StrGet(P),"`n","`r",2)).Length?(p+=StrLen(LF:=str[1])*2,p+=!NumGet(p,"UShort") ? 0 : NumGet(p,"USHORT")=13?4:2):0
-  }
+  ;~ G(p,ByRef LF:=""){ ; get line and advance pointer to next line
+    ;~ return !p||!NumGet(p,"UShort")?0:(str:=StrSplit(StrGet(P),"`n","`r",2)).Length?(p+=StrLen(LF:=str[1])*2,p+=!NumGet(p,"UShort") ? 0 : NumGet(p,"USHORT")=13?4:2):0
+  ;~ }
   L(ByRef txt,Y:=0){ ; convert yaml to object
+    static _fun_:=A_PtrSize=8?"SIXJdExED7cBZkWFwHUM60BIg8ECZkWFwHQkZkGD+Ap0IWZBg/gNRA+3QQJ142ZBg/gKdB9Ig8ECZkWFwHXjSInIw4XSdAUx0maJEUiNQQLDMcDDhdJ0BTHAZokBSI1BBMOQkJCQ":"i0QkBIXAdEsPtxBmhdJ1CutBg8ACZoXSdDdmg/oKdCBmg/oND7dQAnXoZoP6CnQmg8ACZoXSdejzw422AAAAAItMJAiFyXQFMdJmiRCDwALD88MxwMOLTCQIhcl0BTHSZokQg8AEw5A=",_sz_,NXTLN,_op_,__:=(DllCall("crypt32\CryptStringToBinary","str",_fun_,"uint",0,"uint",1,"ptr",0,"uint*",_sz_:=0,"ptr",0,"ptr",0),NXTLN:=DllCall("GlobalAlloc","uint",0,"ptr",_sz_,"ptr"),DllCall("VirtualProtect","ptr",NXTLN,"ptr",_sz_,"uint",0x40,"uint*",_op_:=0),DllCall("crypt32\CryptStringToBinary","str",_fun_,"uint",0,"uint",1,"ptr",NXTLN,"uint*",_sz_,"ptr",0,"ptr",0))
     If InStr("[{", SubStr(D:=LTrim(txt," `t`n`r"),1,1))
       return J(D,Yaml) ; create pure json object (different syntax to YAML and better performance)
-    P:=&txt,A:=Map(),D:=[],I:=[]
+    VarSetCapacity(text,StrLen(txt)*2+4,0),StrPut(txt,&text), VarsetCapacity(text,-1)
+    P:=&text,A:=Map(),D:=[],I:=[]
     Loop 1000
       D.Push(0),I.Push(0)
     ;~ While P:=G(LP:=P,LF){
-    While P:=(LP:=P,!p||!NumGet(p,"UShort")?0:(str:=StrSplit(StrGet(P),"`n","`r",2)).Length?(p+=StrLen(LF:=str[1])*2,p+=!NumGet(p,"UShort") ? 0 : NumGet(p,"USHORT")=13?4:2):0){
+    While P && (LP:=P,P:=DllCall(NXTLN,"PTR",P,"Int",true,"PTR"),LF:=StrGet(LP),P){ ;P:=(LP:=P,!p||!NumGet(p,"UShort")?0:(str:=StrSplit(StrGet(P),"`n","`r",2)).Length?(p+=StrLen(LF:=str[1])*2,p+=!NumGet(p,"UShort") ? 0 : NumGet(p,"USHORT")=13?4:2):0){
       if (InStr(LF,"---")=1&&!Y)||(InStr(LF,"---")=1&&(Y.Push(""),D[1]:=0,_L:=_LL:=O:=_Q:=_K:=_S:=_T:=_V:="",1))||(InStr(LF,"...")=1&&NEWDOC:=1)||(LF="")||RegExMatch(LF,"^\s+$")
         continue
       else if NEWDOC&&MsgBox("Error, document ended but new document not specified: " LF)
@@ -173,7 +200,9 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       If (CM:=InStr(LF," #"))&&!RegExMatch(LF,".*[`"'].*\s\#.*[`"'].*") ; check for comments and remove
         LF:=SubStr(LF,1,CM-1)
       ; Split line into yaml elements
-      RegExMatch(LF,"S)^(?<LVL>\s+)?(?<SEQ>-\s)?(?<KEY>`".+`"\s*:\s|'.+'\s*:\s|[^:`"'\{\[]+\s*:\s)?\s*(?<SCA>[\|\>][+-]?)?\s*(?<TYP>!!\w+)?\s*(?<AGET>\*[^\s\t]+)?\s*(?<ASET>&[^\s\t]+)?\s*(?<VAL>`".+`"|'.+'|.+)?\s*$",_),L:=LL:=S(_.LVL),Q:=_.SEQ,K:=_.KEY,S:=_.SCA,T:=SubStr(_.TYP,3),V:=Q(_.VAL),V:= V is "Integer"?V+0:V,VQ:=InStr(".''.`"`".", "." SubStr(LTrim(_.VAL," `t"),1,1) SubStr(RTrim(_.VAL," `t"),-1) ".")
+      If SubStr(LTrim(LF," `t"),1,1)=":"
+        return MsgBox("Error: Unexpected character: ':'")
+      RegExMatch(LF,"S)^(?<LVL>\s+)?(?<SEQ>-\s)?(?<KEY>`".*`"\s*:\s?|'.*'\s*:\s?|[^:`"'\{\[]+\s*:\s?)?\s*(?<SCA>[\|\>][+-]?)?\s*(?<TYP>!!\w+)?\s*(?<AGET>\*[^\s\t]+)?\s*(?<ASET>&[^\s\t]+)?\s*(?<VAL>`".+`"|'.+'|.+)?\s*$",_),L:=LL:=S(_.LVL),Q:=_.SEQ,K:=_.KEY,S:=_.SCA,T:=SubStr(_.TYP,3),V:=Q(_.VAL),V:= V is "Integer"&&"" V+0=V?V+0:V,VQ:=InStr(".''.`"`".", "." SubStr(LTrim(_.VAL," `t"),1,1) SubStr(RTrim(_.VAL," `t"),-1) ".")
       if L>1{
         if LL=_LL
           L:=_L
@@ -186,7 +215,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
        }
       if Trim(_.Value()," `t")="-" ; empty sequence not cached by previous line
         V:="",Q:="-"
-      else if !K&&V&&!Q ; only a value is catched, convert to key
+      else if K=""&&V&&!Q ; only a value is catched, convert to key
         K:=V,V:=""
       If !Q&&SubStr(RTrim(K," `t"),-1)!=":" ; not a sequence and key is missing :
         if L>_L&&(D[_L][_K]:=K,LL:=_LL,L:=_L,K:=_K,Q:=_Q,_S:=">")
@@ -223,9 +252,9 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         A[_A:=SubStr(_.ASET,2)]:=V
       if _.AGET
         V:=A[SubStr(_.AGET,2)]
-      else If SubStr(LTrim(V," `t"),1,1)="{" ; create json map object
+      else If !VQ && SubStr(LTrim(V," `t"),1,1)="{" ; create json map object
         O:=Map(),_A?A[_A]:=O:"",P:=(O(O,LP+InStr(LF,V)*2,L))
-      else if SubStr(LTrim(V," `t"),1,1)="[" ; create json sequence object
+      else if !VQ && SubStr(LTrim(V," `t"),1,1)="[" ; create json sequence object
         O:=[],_A?A[_A]:=O:"",P:=(A(O,LP+InStr(LF,V)*2,L))
       if Q ; push sequence value into an object
         (V ? D[L].Push(O?O:S?"":V) : 0)
@@ -334,8 +363,9 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     return (t:=SubStr(S:=Trim(S," `t"),1,1) SubStr(S,-1)) = '""' ? (InStr(S,"\")?U(SubStr(S,2,-1)):SubStr(S,2,-1)) : t = "''" ? SubStr(S,2,-1) : S
   }
   O(O,P,L){ ; YamlObject: convert json map 
+    static _fun_:=A_PtrSize=8?"SIXJdExED7cBZkWFwHUM60BIg8ECZkWFwHQkZkGD+Ap0IWZBg/gNRA+3QQJ142ZBg/gKdB9Ig8ECZkWFwHXjSInIw4XSdAUx0maJEUiNQQLDMcDDhdJ0BTHAZokBSI1BBMOQkJCQ":"i0QkBIXAdEsPtxBmhdJ1CutBg8ACZoXSdDdmg/oKdCBmg/oND7dQAnXoZoP6CnQmg8ACZoXSdejzw422AAAAAItMJAiFyXQFMdJmiRCDwALD88MxwMOLTCQIhcl0BTHSZokQg8AEw5A=",_sz_,NXTLN,_op_,__:=(DllCall("crypt32\CryptStringToBinary","str",_fun_,"uint",0,"uint",1,"ptr",0,"uint*",_sz_:=0,"ptr",0,"ptr",0),NXTLN:=DllCall("GlobalAlloc","uint",0,"ptr",_sz_,"ptr"),DllCall("VirtualProtect","ptr",NXTLN,"ptr",_sz_,"uint",0x40,"uint*",_op_:=0),DllCall("crypt32\CryptStringToBinary","str",_fun_,"uint",0,"uint",1,"ptr",NXTLN,"uint*",_sz_,"ptr",0,"ptr",0))
     v:=q:=k:=0,key:=val:=lf:=""
-    If c:=Chr(NumGet(p,"UShort"))
+    If ""!=c:=Chr(NumGet(p,"UShort"))
     Loop {
       if c="`n"||(c="`r"&&10=NumGet(p+2,"UShort")){
         if (q||k||(!v&&!k)||SubStr(Ltrim(StrGet(p+(c="`n"?2:4))," `t`r`n"),1,1)="}") && P+=c="`n"?2:4
@@ -348,15 +378,16 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&k&&(c="["||c="{") && (P:=c="[" ? A(O[key]:=[],P+2,L) : O(O[key]:=Map(),P+2,L),key:="",k:=0,1)
         continue
-      else if v&&!k&&((!q&&c=":")||(q&&q=c)) && (v:=0,key:=!q && key is "number" ? key+0 : q ? (InStr(key,"\")?U(key):key) : Trim(key," `t"),k:=1,q:=0,P+=2)
+      else if v&&!k&&((!q&&c=":")||(q&&q=c)) && (v:=0,key:=!q && key is "number"&&"" key+0=key?key+0:q?(InStr(key,"\")?U(key):key):Trim(key," `t"),k:=1,q:=0,P+=2)
         continue
-      else if v&&k&&((!q&&c=",")||(q&&q=c)) && (v:=0,O[key]:=!q && val is "number" ? val+0 : q ? (InStr(val,"\")?U(val):val) : Trim(val," `t"),val:="",key:="",q:=0,k:=0,P+=2)
+      else if v&&k&&((!q&&c=",")||(q&&q=c)) && (v:=0,O[key]:=!q && val is "number"&&"" val+0=val ? val+0 : q ? (InStr(val,"\")?U(val):val) : Trim(val," `t"),val:="",key:="",q:=0,k:=0,P+=2)
         continue
       else if !q&&c="}"&&(k&&v?(O[key]:=val,1):1){
-        if ((tp:=G(P+2,lf))&&(NumGet(P+2,"UShort")=10||NumGet(P+4,"UShort")=10||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
-          return nl?tp:P+2
+        ;~ if ((tp:=G(P+2,lf))&&(NumGet(P+2,"UShort")=10||NumGet(P+4,"UShort")=10||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
+        if ((tp:=DllCall(NXTLN,"PTR",P+2,"Int",false,"PTR"),lf:=StrGet(P+2),tp)&&(NumGet(P+2,"UShort")=0||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
+          return nl?DllCall(NXTLN,"PTR",P+2,"Int",true,"PTR"):P+4
         else if !tp
-          return 0
+          return DllCall(NXTLN,"PTR",P+4,"Int",false,"PTR")
         else if MsgBox("Error: Malformed inline YAML string: " StrGet(p))
           Exit
       } else if !v&&(c=","||c=":"||c=" "||c="`t")&&P+=2
@@ -368,12 +399,14 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       else if MsgBox("Error undefined")
         Exit 
     } Until(""=c:=Chr(NumGet(p,"UShort")))
-    MsgBox("Error: unexpected end of YAML string: " StrGet(p))
-    Exit
+    return P
+    ;~ MsgBox("Error: unexpected end of YAML string: " StrGet(p))
+    ;~ Exit
   }
   A(O,P,L){ ; YamlArray: convert json sequence
+    static _fun_:=A_PtrSize=8?"SIXJdExED7cBZkWFwHUM60BIg8ECZkWFwHQkZkGD+Ap0IWZBg/gNRA+3QQJ142ZBg/gKdB9Ig8ECZkWFwHXjSInIw4XSdAUx0maJEUiNQQLDMcDDhdJ0BTHAZokBSI1BBMOQkJCQ":"i0QkBIXAdEsPtxBmhdJ1CutBg8ACZoXSdDdmg/oKdCBmg/oND7dQAnXoZoP6CnQmg8ACZoXSdejzw422AAAAAItMJAiFyXQFMdJmiRCDwALD88MxwMOLTCQIhcl0BTHSZokQg8AEw5A=",_sz_,NXTLN,_op_,__:=(DllCall("crypt32\CryptStringToBinary","str",_fun_,"uint",0,"uint",1,"ptr",0,"uint*",_sz_:=0,"ptr",0,"ptr",0),NXTLN:=DllCall("GlobalAlloc","uint",0,"ptr",_sz_,"ptr"),DllCall("VirtualProtect","ptr",NXTLN,"ptr",_sz_,"uint",0x40,"uint*",_op_:=0),DllCall("crypt32\CryptStringToBinary","str",_fun_,"uint",0,"uint",1,"ptr",NXTLN,"uint*",_sz_,"ptr",0,"ptr",0))
     v:=q:=c:=0,lf:=""
-    If c:=Chr(NumGet(p,"UShort"))
+    If ""!=c:=Chr(NumGet(p,"UShort"))
     Loop {
       if c="`n"||(c="`r"&&10=NumGet(p+2,"UShort")){
         if (q||!v||SubStr(Ltrim(StrGet(p+(c="`n"?2:4))," `t`r`n"),1,1)="]") && P+=c="`n"?2:4
@@ -386,13 +419,14 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&(c="["||c="{") && (P:=c="[" ? A((O.Push(lf:=[]),lf),P+2,L) : O((O.Push(lf:=Map()),lf),P+2,L),lf:="",1)
         continue
-      else if v&&((!q&&c=",")||(q&&c=q)) && (v:=0,O.Push(!q && lf is "number" ? lf+0 : q ? (InStr(lf,"\")?U(lf):lf) : Trim(lf," `t")),q:=0,lf:="",P+=2)
+      else if v&&((!q&&c=",")||(q&&c=q)) && (v:=0,O.Push(!q && lf is "number"&&"" lf+0=lf ? lf+0 : q ? (InStr(lf,"\")?U(lf):lf) : Trim(lf," `t")),q:=0,lf:="",P+=2)
         continue
       else if !q&&c="]"&&(v?(O.Push(Trim(lf," `t")),1):1){
-        if ((tp:=G(P+2,lf))&&(NumGet(P+2,"UShort")=10||NumGet(P+4,"UShort")=10||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
-          return nl?tp:P+2
+        ;~ if ((tp:=G(P+2,lf))&&(NumGet(P+2,"UShort")=10||NumGet(P+4,"UShort")=10||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
+        if ((tp:=DllCall(NXTLN,"PTR",P+2,"Int",false,"PTR"),lf:=StrGet(P+2),tp)&&(NumGet(P+2,"UShort")=0||(nl:=RegExMatch(lf,"^\s+?$"))||RegExMatch(lf,"^\s*[,\}\]]")))
+          return nl?DllCall(NXTLN,"PTR",P+2,"Int",true,"PTR"):P+4
         else if !tp
-          return 0
+          return DllCall(NXTLN,"PTR",P+4,"Int",false,"PTR")
         else if MsgBox("Error: Malformed inline YAML string: " StrGet(p))
           Exit
       } else if !v&&(c=","||c=" "||c="`t")&&P+=2 ;InStr(", `t",c)
@@ -404,8 +438,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       else if MsgBox("Error undefined")
         Exit
     } Until(""=c:=Chr(NumGet(p,"UShort")))
-    MsgBox("Error: unexpected end of YAML string: " StrGet(p))
-    Exit
+    return P
   }
   J(ByRef S,Y){ ; PureJSON: convert pure JSON Object
     D:=[C:=(A:=InStr(S,"[")=1)?[]:Map()],S:=LTrim(SubStr(S,2)," `t`r`n`""),L:=1,N:=0,V:=K:="",Y?(Y.Push(C),J:=Y):J:=[C]
@@ -432,9 +465,9 @@ Yaml(ByRef TextFileObject,Yaml:=0){
           } else if !(InStr(" `t`r,",A_LoopField)||(A_LoopField=":"&&V:=1)){
             If RegExMatch(SubStr(t,A_Index),"m)^(null|false|true|-?\d+\.?\d*)\s*[,}\]\r\n]",R)&&(N:=R.Len(0)-2,R:=R.1,1){
               if A
-                C.Push(R="null"?"":R="true"?true:R="false"?false:R+0)
+                C.Push(R="null"?"":R="true"?true:R="false"?false:"" R+0=R?R+0:R)
               else if V
-                C[K]:=R="null"?"":R="true"?true:R="false"?false:R+0,K:=V:=""
+                C[K]:=R="null"?"":R="true"?true:R="false"?false:"" R+0=R?R+0:R,K:=V:=""
               else
                 return MsgBox("Error: Malformed JSON - missing key in: " t)
             } else
@@ -442,11 +475,11 @@ Yaml(ByRef TextFileObject,Yaml:=0){
           }
         }
       } else if A
-        C.Push(A_LoopField~="^(?!0)-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField)
+        C.Push(A_LoopField~="^(?!0)-?\d+\.?\d*$"&&"" A_LoopField+0=A_LoopField?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField)
       else if V
-        C[K]:=A_LoopField~="^(?!0)-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField,K:=V:=""
+        C[K]:=A_LoopField~="^(?!0)-?\d+\.?\d*$"&&"" A_LoopField+0=A_LoopField?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField,K:=V:=""
       else
-        K:=A_LoopField~="^(?!0)-?\d+\.?\d*$"?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField
+        K:=A_LoopField~="^(?!0)-?\d+\.?\d*$"&&"" A_LoopField+0=A_LoopField?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField
     }
     return J[1]
   }
