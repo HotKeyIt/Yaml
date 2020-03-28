@@ -174,7 +174,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     If InStr("[{", SubStr(D:=LTrim(txt," `t`n`r"),1,1))
       return J(D,Yaml) ; create pure json object (different syntax to YAML and better performance)
     VarSetCapacity(text,StrLen(txt)*2+4,0),StrPut(txt,&text), VarsetCapacity(text,-1)
-    P:=&text,A:=UMap(),D:=[],I:=[]
+    P:=&text,A:=Map(),D:=[],I:=[]
     Loop 1000
       D.Push(0),I.Push(0)
     ;~ While P:=G(LP:=P,LF){
@@ -231,13 +231,13 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         if L=1{ ; first level, use or create main object
           if Y&&Type(Y[Y.Length])!="String"&&((Q&&Type(Y[Y.Length])!="Array")||(!Q&&Type(Y[Y.Length])="Array"))&&MsgBox("Mapping Item and Sequence cannot be defined on the same level:`n" LF) ; trying to create sequence on the same level as key or vice versa
             Exit
-          else D[L]:=Y ? (Type(Y[Y.Length])="String"?(Y[Y.Length]:=Q?[]:UMap()):Y[Y.Length]) : (Y:=Q?[[]]:[UMap()])[1]
+          else D[L]:=Y ? (Type(Y[Y.Length])="String"?(Y[Y.Length]:=Q?[]:Map()):Y[Y.Length]) : (Y:=Q?[[]]:[Map()])[1]
         } else if !_Q&&Type(D[L-1][_K])=(Q?"Array":"Object") ; use previous object
           D[L]:=D[L-1][_K]
-        else D[L]:=O:=Q?[]:UMap(),_A?A[_A]:=O:"",_Q ? D[L-1].Push(O) : D[L-1][_K]:=O,O:="" ; create new object
+        else D[L]:=O:=Q?[]:Map(),_A?A[_A]:=O:"",_Q ? D[L-1].Push(O) : D[L-1][_K]:=O,O:="" ; create new object
       _A:="" ; reset alias
       if Q&&K ; Sequence containing a key, create object
-        D[L].Push(O:=UMap()),D[++L]:=O,Q:=O:="",LL+=1
+        D[L].Push(O:=Map()),D[++L]:=O,Q:=O:="",LL+=1
       If (Q&&Type(D[L])!="Array"||!Q&&Type(D[L])="Array")&&MsgBox("Mapping Item and Sequence cannot be defined on the same level:`n" LF) ; trying to create sequence on the same level as key or vice versa
         Exit
       if T="binary"{ ; !!binary
@@ -253,7 +253,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       if _.AGET
         V:=A[SubStr(_.AGET,2)]
       else If !VQ && SubStr(LTrim(V," `t"),1,1)="{" ; create json map object
-        O:=UMap(),_A?A[_A]:=O:"",P:=(O(O,LP+InStr(LF,V)*2,L))
+        O:=Map(),_A?A[_A]:=O:"",P:=(O(O,LP+InStr(LF,V)*2,L))
       else if !VQ && SubStr(LTrim(V," `t"),1,1)="[" ; create json sequence object
         O:=[],_A?A[_A]:=O:"",P:=(A(O,LP+InStr(LF,V)*2,L))
       if Q ; push sequence value into an object
@@ -374,7 +374,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
         continue
-      else if !v&&k&&(c="["||c="{") && (P:=c="[" ? A(O[key]:=[],P+2,L) : O(O[key]:=UMap(),P+2,L),key:="",k:=0,1)
+      else if !v&&k&&(c="["||c="{") && (P:=c="[" ? A(O[key]:=[],P+2,L) : O(O[key]:=Map(),P+2,L),key:="",k:=0,1)
         continue
       else if v&&!k&&((!q&&c=":")||(q&&q=c)) && (v:=0,key:=!q && key is "number"&&"" key+0=key?key+0:q?(InStr(key,"\")?U(key):key):Trim(key," `t"),k:=1,q:=0,P+=2)
         continue
@@ -415,7 +415,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
         continue
-      else if !v&&(c="["||c="{") && (P:=c="[" ? A((O.Push(lf:=[]),lf),P+2,L) : O((O.Push(lf:=UMap()),lf),P+2,L),lf:="",1)
+      else if !v&&(c="["||c="{") && (P:=c="[" ? A((O.Push(lf:=[]),lf),P+2,L) : O((O.Push(lf:=Map()),lf),P+2,L),lf:="",1)
         continue
       else if v&&((!q&&c=",")||(q&&c=q)) && (v:=0,O.Push(!q && lf is "number"&&"" lf+0=lf ? lf+0 : q ? (InStr(lf,"\")?U(lf):lf) : Trim(lf," `t")),q:=0,lf:="",P+=2)
         continue
@@ -441,7 +441,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     ;~ Exit
   }
   J(ByRef S,Y){ ; PureJSON: convert pure JSON Object
-    D:=[C:=(A:=InStr(S,"[")=1)?[]:UMap()],S:=LTrim(SubStr(S,2)," `t`r`n"),L:=1,N:=0,V:=K:="",Y?(Y.Push(C),J:=Y):J:=[C],!(Q:=InStr(S,'"')!=1)?S:=LTrim(S,'"'):""
+    D:=[C:=(A:=InStr(S,"[")=1)?[]:Map()],S:=LTrim(SubStr(S,2)," `t`r`n"),L:=1,N:=0,V:=K:="",Y?(Y.Push(C),J:=Y):J:=[C],!(Q:=InStr(S,'"')!=1)?S:=LTrim(S,'"'):""
     Loop Parse, S, '"' {
       Q:=NQ?1:!Q
       NQ:=Q&&(SubStr(A_LoopField,-3)="\\\"||(SubStr(A_LoopField,-1)="\"&&SubStr(A_LoopField,-2)!="\\"))
@@ -457,7 +457,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
             else If InStr("{[",A_LoopField){
               if !A&&!V
                 return MsgBox("Error: Malformed JSON - missing key: " t)
-              C:=A_LoopField="["?[]:UMap(),A?D[L].Push(C):D[L][K]:=C,D.Has(++L)?D[L]:=C:D.Push(C),V:="",A:=Type(C)="Array"
+              C:=A_LoopField="["?[]:Map(),A?D[L].Push(C):D[L][K]:=C,D.Has(++L)?D[L]:=C:D.Push(C),V:="",A:=Type(C)="Array"
               continue
             } else if InStr("]}",A_LoopField){
               If !A&&V
