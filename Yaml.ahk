@@ -159,7 +159,7 @@ MsgBox Yaml(Map("test",1,"try","hand"),-5)
 	;~ return i;
 ;~ }
 
-;Yaml v1.0.9 requires AutoHotkey v2.106+
+;Yaml v1.0.10 requires AutoHotkey v2.106+
 Yaml(ByRef TextFileObject,Yaml:=0){
   If IsObject(TextFileObject)
     return D(TextFileObject,Yaml) ; dump object to yaml string
@@ -174,7 +174,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     If InStr("[{", SubStr(D:=LTrim(txt," `t`n`r"),1,1))
       return J(D,Yaml) ; create pure json object (different syntax to YAML and better performance)
     VarSetCapacity(text,StrLen(txt)*2+4,0),StrPut(txt,&text), VarsetCapacity(text,-1)
-    P:=&text,A:=Map(),D:=[],I:=[]
+    P:=&text,A:=UMap(),D:=[],I:=[]
     Loop 1000
       D.Push(0),I.Push(0)
     ;~ While P:=G(LP:=P,LF){
@@ -231,13 +231,13 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         if L=1{ ; first level, use or create main object
           if Y&&Type(Y[Y.Length])!="String"&&((Q&&Type(Y[Y.Length])!="Array")||(!Q&&Type(Y[Y.Length])="Array"))&&MsgBox("Mapping Item and Sequence cannot be defined on the same level:`n" LF) ; trying to create sequence on the same level as key or vice versa
             Exit
-          else D[L]:=Y ? (Type(Y[Y.Length])="String"?(Y[Y.Length]:=Q?[]:Map()):Y[Y.Length]) : (Y:=Q?[[]]:[Map()])[1]
+          else D[L]:=Y ? (Type(Y[Y.Length])="String"?(Y[Y.Length]:=Q?[]:UMap()):Y[Y.Length]) : (Y:=Q?[[]]:[UMap()])[1]
         } else if !_Q&&Type(D[L-1][_K])=(Q?"Array":"Object") ; use previous object
           D[L]:=D[L-1][_K]
-        else D[L]:=O:=Q?[]:Map(),_A?A[_A]:=O:"",_Q ? D[L-1].Push(O) : D[L-1][_K]:=O,O:="" ; create new object
+        else D[L]:=O:=Q?[]:UMap(),_A?A[_A]:=O:"",_Q ? D[L-1].Push(O) : D[L-1][_K]:=O,O:="" ; create new object
       _A:="" ; reset alias
       if Q&&K ; Sequence containing a key, create object
-        D[L].Push(O:=Map()),D[++L]:=O,Q:=O:="",LL+=1
+        D[L].Push(O:=UMap()),D[++L]:=O,Q:=O:="",LL+=1
       If (Q&&Type(D[L])!="Array"||!Q&&Type(D[L])="Array")&&MsgBox("Mapping Item and Sequence cannot be defined on the same level:`n" LF) ; trying to create sequence on the same level as key or vice versa
         Exit
       if T="binary"{ ; !!binary
@@ -253,7 +253,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       if _.AGET
         V:=A[SubStr(_.AGET,2)]
       else If !VQ && SubStr(LTrim(V," `t"),1,1)="{" ; create json map object
-        O:=Map(),_A?A[_A]:=O:"",P:=(O(O,LP+InStr(LF,V)*2,L))
+        O:=UMap(),_A?A[_A]:=O:"",P:=(O(O,LP+InStr(LF,V)*2,L))
       else if !VQ && SubStr(LTrim(V," `t"),1,1)="[" ; create json sequence object
         O:=[],_A?A[_A]:=O:"",P:=(A(O,LP+InStr(LF,V)*2,L))
       if Q ; push sequence value into an object
@@ -267,13 +267,11 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       Y.Pop()
     return Y
   }
-  U(ByRef S){ ; UniChar: convert unicode and special characters
-    static m:=Map("a","`a","b","`b","t","`t","n","`n","v","`v","f","`f","r","`r","e",Chr(0x1B))
-    Loop Parse (e:=0,S),"\"
-      If (A_Index=1&&A_LoopField!=""&&v:=A_LoopField) || (e && (e:=0,v.="\" A_LoopField)) || (A_LoopField=""&&e:=1)
-        Continue
-      else v .= RegexMatch( t := (t:=InStr("ux",SubStr(A_LoopField,1,1)) ? SubStr(A_LoopField,1,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")-1) : SubStr(A_LoopField,1,1)) == "N" ? "\x85" : t == "P" ? "\x2029" : t = 0 ? "\x0" : t == "L" ? "\x2028" : t == "_" ? "\xA0" : t ,"i)^[ux][\da-f]+$") ? Chr(Abs("0x" SubStr(t,2))) : m.has(t) ? m[t] : t
-          ,v .= InStr("ux",SubStr(A_LoopField,1,1)) ? SubStr(A_LoopField,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")) : SubStr(A_LoopField,2)
+  U(ByRef S,e:=1){ ; UniChar: convert unicode and special characters
+    static m:=Map(Ord('"'),'"',Ord("a"),"`a",Ord("b"),"`b",Ord("t"),"`t",Ord("n"),"`n",Ord("v"),"`v",Ord("f"),"`f",Ord("r"),"`r",Ord("e"),Chr(0x1B),Ord("N"),Chr(0x85),Ord("P"),Chr(0x2029),0,"",Ord("L"),Chr(0x2028),Ord("_"),Chr(0xA0))
+    Loop Parse S,"\"
+      If !((e:=!e)&&A_LoopField=""?v.="\":!e?v.=A_LoopField:0)
+        v .= (t:=InStr("ux",SubStr(A_LoopField,1,1)) ? SubStr(A_LoopField,1,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")-1) : "")&&RegexMatch(t,"i)^[ux][\da-f]+$") ? Chr(Abs("0x" SubStr(t,2))) SubStr(A_LoopField,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")) : m.has(Ord(A_LoopField)) ? m[Ord(A_LoopField)] SubStr(A_LoopField,2) : "\" A_LoopField,e:=A_LoopField=""?e:!e
     return v
   }
   C(ByRef S){ ; CharUni: convert text to unicode notation
@@ -307,7 +305,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     return RTrim(D,",`n")
   }
   H(O:="",J:=0,R:=0,Q:=0){ ; helper: convert object to yaml string
-    static M1:="{",M2:="}",S1:="[",S2:="]",N:="`n",C:=", ",S:="- ",E:="",K:=": "
+    static M1:="{",M2:="}",S1:="[",S2:="]",N:="`n",C:=",",S:="- ",E:="",K:=":"
     If (t:=type(O))="Array"{
       D:=J<1&&!R?S1:""
       for key, value in O{
@@ -376,7 +374,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
         continue
-      else if !v&&k&&(c="["||c="{") && (P:=c="[" ? A(O[key]:=[],P+2,L) : O(O[key]:=Map(),P+2,L),key:="",k:=0,1)
+      else if !v&&k&&(c="["||c="{") && (P:=c="[" ? A(O[key]:=[],P+2,L) : O(O[key]:=UMap(),P+2,L),key:="",k:=0,1)
         continue
       else if v&&!k&&((!q&&c=":")||(q&&q=c)) && (v:=0,key:=!q && key is "number"&&"" key+0=key?key+0:q?(InStr(key,"\")?U(key):key):Trim(key," `t"),k:=1,q:=0,P+=2)
         continue
@@ -417,7 +415,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         continue
       else if !v&&(c='"'||c="'") && (q:=c,v:=1,P+=2)
         continue
-      else if !v&&(c="["||c="{") && (P:=c="[" ? A((O.Push(lf:=[]),lf),P+2,L) : O((O.Push(lf:=Map()),lf),P+2,L),lf:="",1)
+      else if !v&&(c="["||c="{") && (P:=c="[" ? A((O.Push(lf:=[]),lf),P+2,L) : O((O.Push(lf:=UMap()),lf),P+2,L),lf:="",1)
         continue
       else if v&&((!q&&c=",")||(q&&c=q)) && (v:=0,O.Push(!q && lf is "number"&&"" lf+0=lf ? lf+0 : q ? (InStr(lf,"\")?U(lf):lf) : Trim(lf," `t")),q:=0,lf:="",P+=2)
         continue
@@ -439,47 +437,55 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         Exit
     } Until(""=c:=Chr(NumGet(p,"UShort")))
     return P
+    ;~ MsgBox("Error: unexpected end of YAML string: " StrGet(p))
+    ;~ Exit
   }
   J(ByRef S,Y){ ; PureJSON: convert pure JSON Object
-    D:=[C:=(A:=InStr(S,"[")=1)?[]:Map()],S:=LTrim(SubStr(S,2)," `t`r`n`""),L:=1,N:=0,V:=K:="",Y?(Y.Push(C),J:=Y):J:=[C]
+    D:=[C:=(A:=InStr(S,"[")=1)?[]:UMap()],S:=LTrim(SubStr(S,2)," `t`r`n"),L:=1,N:=0,V:=K:="",Y?(Y.Push(C),J:=Y):J:=[C],!(Q:=InStr(S,'"')!=1)?S:=LTrim(S,'"'):""
     Loop Parse, S, '"' {
-      If (t:=Trim(what:=A_LoopField," `t`r`n"))=","||(t=":"&&V:=1)
-        continue
-      else If t&&(InStr("{[]},:",SubStr(t,1,1)) || RegExMatch(t,"^\d*\s*[,\]\}]")){
-        Loop Parse, t {
-          if N&&N--
-            continue
-          If InStr("`n`r `t",A_LoopField)
-            continue
-          else If InStr("{[",A_LoopField){
-            if !A&&!V
-              return MsgBox("Error: Malformed JSON - missing key: " t)
-            C:=A_LoopField="["?[]:Map(),A?D[L].Push(C):D[L][K]:=C,D.Has(++L)?D[L]:=C:D.Push(C),V:="",A:=Type(C)="Array"
-            continue
-          } else if InStr("]}",A_LoopField){
-            If !A&&V
-              return MsgBox("Error: Malformed JSON - missing value: " t)
-            else if L=0
-              return MsgBox("Error: Malformed JSON - to many closing bracket: " t)
-            else C:=--L=0?"":D[L],A:=Type(C)="Array"
-          } else if !(InStr(" `t`r,",A_LoopField)||(A_LoopField=":"&&V:=1)){
-            If RegExMatch(SubStr(t,A_Index),"m)^(null|false|true|-?\d+\.?\d*)\s*[,}\]\r\n]",R)&&(N:=R.Len(0)-2,R:=R.1,1){
-              if A
-                C.Push(R="null"?"":R="true"?true:R="false"?false:"" R+0=R?R+0:R)
-              else if V
-                C[K]:=R="null"?"":R="true"?true:R="false"?false:"" R+0=R?R+0:R,K:=V:=""
-              else
-                return MsgBox("Error: Malformed JSON - missing key in: " t)
-            } else
-              return MsgBox("Error: Malformed JSON - unrecognized character: " A_LoopField " in " t)
+      Q:=NQ?1:!Q
+      NQ:=Q&&(SubStr(A_LoopField,-3)="\\\"||(SubStr(A_LoopField,-1)="\"&&SubStr(A_LoopField,-2)!="\\"))
+      if !Q {
+        If (t:=Trim(A_LoopField," `t`r`n"))=","||(t=":"&&V:=1)
+          continue
+        else If t&&(InStr("{[]},:",SubStr(t,1,1)) || RegExMatch(t,"^\d*\s*[,\]\}]")){
+          Loop Parse, t {
+            if N&&N--
+              continue
+            If InStr("`n`r `t",A_LoopField)
+              continue
+            else If InStr("{[",A_LoopField){
+              if !A&&!V
+                return MsgBox("Error: Malformed JSON - missing key: " t)
+              C:=A_LoopField="["?[]:UMap(),A?D[L].Push(C):D[L][K]:=C,D.Has(++L)?D[L]:=C:D.Push(C),V:="",A:=Type(C)="Array"
+              continue
+            } else if InStr("]}",A_LoopField){
+              If !A&&V
+                return MsgBox("Error: Malformed JSON - missing value: " t)
+              else if L=0
+                return MsgBox("Error: Malformed JSON - to many closing bracket: " t)
+              else C:=--L=0?"":D[L],A:=Type(C)="Array"
+            } else if !(InStr(" `t`r,",A_LoopField)||(A_LoopField=":"&&V:=1)){
+              If RegExMatch(SubStr(t,A_Index),"m)^(null|false|true|-?\d+\.?\d*)\s*[,}\]\r\n]",R)&&(N:=R.Len(0)-2,R:=R.1,1){
+                if A
+                  C.Push(R="null"?"":R="true"?true:R="false"?false:"" R+0=R?R+0:R)
+                else if V
+                  C[K]:=R="null"?"":R="true"?true:R="false"?false:"" R+0=R?R+0:R,K:=V:=""
+                else
+                  return MsgBox("Error: Malformed JSON - missing key in: " t)
+              } else
+                return MsgBox("Error: Malformed JSON - unrecognized character: " A_LoopField " in " t)
+            }
           }
         }
-      } else if A
-        C.Push(A_LoopField~="^(?!0)-?\d+\.?\d*$"&&"" A_LoopField+0=A_LoopField?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField)
+      } else if NQ&&(P.=A_LoopField '"',1)
+        continue
+      else if A
+        LF:=P A_LoopField,C.Push(LF~="^(?!0)-?\d+\.?\d*$"&&"" LF+0=LF?LF+0:InStr(LF,"\")?U(LF):LF),P:=""
       else if V
-        C[K]:=A_LoopField~="^(?!0)-?\d+\.?\d*$"&&"" A_LoopField+0=A_LoopField?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField,K:=V:=""
+        LF:=P A_LoopField,C[K]:=LF~="^(?!0)-?\d+\.?\d*$"&&"" LF+0=LF?LF+0:InStr(LF,"\")?U(LF):LF,K:=V:=P:=""
       else
-        K:=A_LoopField~="^(?!0)-?\d+\.?\d*$"&&"" A_LoopField+0=A_LoopField?A_LoopField+0:InStr(A_LoopField,"\")?U(A_LoopField):A_LoopField
+        LF:=P A_LoopField,K:=LF~="^(?!0)-?\d+\.?\d*$"&&"" LF+0=LF?LF+0:InStr(LF,"\")?U(LF):LF,P:=""
     }
     return J[1]
   }
