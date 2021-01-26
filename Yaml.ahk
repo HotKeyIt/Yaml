@@ -159,7 +159,7 @@ MsgBox Yaml(Map("test",1,"try","hand"),-5)
 	;~ return i;
 ;~ }
 
-;Yaml v1.0.11 requires AutoHotkey v2.122+
+;Yaml v1.0.12 requires AutoHotkey v2.122+
 Yaml(ByRef TextFileObject,Yaml:=0){
   If IsObject(TextFileObject)
     return D(TextFileObject,Yaml) ; dump object to yaml string
@@ -182,7 +182,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
       D.Push(0),I.Push(0)
     ;~ While P:=G(LP:=P,LF){
     While P && (LP:=P,P:=DllCall(NXTLN,"PTR",P,"Int",true,"PTR"),LF:=StrGet(LP),P){ ;P:=(LP:=P,!p||!NumGet(p,"UShort")?0:(str:=StrSplit(StrGet(P),"`n","`r",2)).Length?(p+=StrLen(LF:=str[1])*2,p+=!NumGet(p,"UShort") ? 0 : NumGet(p,"USHORT")=13?4:2):0){
-      if (InStr(LF,"---")=1&&!Y)||(InStr(LF,"---")=1&&(Y.Push(""),D[1]:=0,_L:=_LL:=O:=_Q:=_K:=_S:=_T:=_V:="",1))||(InStr(LF,"...")=1&&NEWDOC:=1)||(LF="")||RegExMatch(LF,"^\s+$")
+      if (InStr(LF,"---")=1&&!Y)||(InStr(LF,"---")=1&&(Y.Push(""),NEWDOC:=0,D[1]:=0,_L:=_LL:=O:=_Q:=_K:=_S:=_T:=_V:="",1))||(InStr(LF,"...")=1&&NEWDOC:=1)||(LF="")||RegExMatch(LF,"^\s+$")
         continue
       else if NEWDOC&&MsgBox("Error, document ended but new document not specified: " LF)
         Exit
@@ -226,7 +226,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
         else (MsgBox("Error, invalid key:`n" LF),Exit())
       else if K!="" ; trim key if not empty
         K:=Q(RTrim(K,": "))
-      Loop _L ? _L-L : 0 ; remove objects in deeper levels created before
+      Loop _L="" ? D.Length-1 : _L ? _L-L : 0 ; remove objects in deeper levels created before
         D[L+A_Index]:=0,I[L+A_Index]:=0
       if !VQ&&_.VAL!=""&&!InStr("'`"",_C:=SubStr(LTrim(_.VAL," `t"),1,1)) ; check if value started with a quote and was not closed so next line continues
         _C:=""
@@ -274,7 +274,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     local v:=""
     static m:=Map(Ord('"'),'"',Ord("a"),"`a",Ord("b"),"`b",Ord("t"),"`t",Ord("n"),"`n",Ord("v"),"`v",Ord("f"),"`f",Ord("r"),"`r",Ord("e"),Chr(0x1B),Ord("N"),Chr(0x85),Ord("P"),Chr(0x2029),0,"",Ord("L"),Chr(0x2028),Ord("_"),Chr(0xA0))
     Loop Parse S,"\"
-      If !((e:=!e)&&A_LoopField=""?v.="\":!e?v.=A_LoopField:0)
+      If !((e:=!e)&&A_LoopField=""?v.="\":!e?(v.=A_LoopField,1):0)
         v .= (t:=InStr("ux",SubStr(A_LoopField,1,1)) ? SubStr(A_LoopField,1,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")-1) : "")&&RegexMatch(t,"i)^[ux][\da-f]+$") ? Chr(Abs("0x" SubStr(t,2))) SubStr(A_LoopField,RegExMatch(A_LoopField,"^[ux]?([\dA-F]{4})?([\dA-F]{2})?\K")) : m.has(Ord(A_LoopField)) ? m[Ord(A_LoopField)] SubStr(A_LoopField,2) : "\" A_LoopField,e:=A_LoopField=""?e:!e
     return v
   }
@@ -294,7 +294,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
     If S=""
       return '""'
     else if (J<1&&!InStr("IntegerFloat",Type(S)))||RegExMatch(S,"m)[\{\[`"'\r\n]|:\s|,\s|\s#")||RegExMatch(S,"^[\s#\\\-:>]")||RegExMatch(S,"m)\s$")||RegExMatch(S,"m)[\x{7F}-\x{7FFF}]")
-      return ("`"" C(S) "`"")
+      return ('"' C(S) '"')
     else return S
   }
   D(O:="",J:=0){ ; dump object to string
@@ -339,8 +339,8 @@ Yaml(ByRef TextFileObject,Yaml:=0){
           F:=IsObject(value)?(Type(value)="Array"?"S":"M"):E
 		Z:=Type(value)="Array"&&value.Length=0?"[]":((Type(value)="Map"&&value.count=0)||(Type(value)="Object"&&ObjOwnPropCount(value)=0))?"{}":""
         If J<=R
-          D.=(J<R*-1?"`n" I(R+2):"") (Q="S"&&A_Index=1?M1:E) (J<1?'"' E(key) '"':E(key)) K (F?(%F%1 (Z?"":H(value,J,R+1,F)) %F%2):E(value,J)) (Q="S"&&A_Index=(Y?O.count:ObjOwnPropCount(O))?M2:E) (J!=0||R?(A_Index=(Y?O.count:ObjOwnPropCount(O))?E:C):E)
-        else If ((D:=D N I(R+1) E(key) K)||1)&&F
+          D.=(J<R*-1?"`n" I(R+2):"") (Q="S"&&A_Index=1?M1:E) E(key,J) K (F?(%F%1 (Z?"":H(value,J,R+1,F)) %F%2):E(value,J)) (Q="S"&&A_Index=(Y?O.count:ObjOwnPropCount(O))?M2:E) (J!=0||R?(A_Index=(Y?O.count:ObjOwnPropCount(O))?E:C):E)
+        else If ((D:=D N I(R+1) E(key,J) K)||1)&&F
           D.= Z?Z:(J<=(R+1)?%F%1:E) H(value,J,R+1,F) (J<=(R+1)?%F%2:E)
         else D .= " " E(value, J)
         If J=0&&!R
