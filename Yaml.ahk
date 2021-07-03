@@ -282,7 +282,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
   C(ByRef S){ ; CharUni: convert text to unicode notation
     local v:=""
     static ascii:=Map("\","\","`a","a","`b","b","`t","t","`n","n","`v","v","`f","f","`r","r",Chr(0x1B),"e","`"","`"",Chr(0x85),"N",Chr(0x2029),"P",Chr(0x2028),"L","","0",Chr(0xA0),"_")
-    If !RegexMatch(s,"[\x{007F}-\x{FFFF}]"){ ;!(v:="") && 
+    If !RegexMatch(s,"[\X{007F}-\X{FFFF}]"){ ;!(v:="") && 
       Loop Parse, S
         v .= ascii.Has(A_LoopField) ? "\" ascii[A_LoopField] : A_LoopField
       return v
@@ -294,7 +294,7 @@ Yaml(ByRef TextFileObject,Yaml:=0){
   E(ByRef S, J:=1){ ; EscIfNeed: check if escaping needed and convert to unicode notation
     If S=""
       return '""'
-    else if (J<1&&!InStr("IntegerFloat",Type(S)))||RegExMatch(S,"m)[\{\[`"'\r\n]|:\s|,\s|\s#")||RegExMatch(S,"^[\s#\\\-:>]")||RegExMatch(S,"m)\s$")||RegExMatch(S,"m)[\x{7F}-\x{7FFF}]")
+    else if (J<1&&!InStr("IntegerFloat",Type(S)))||RegExMatch(S,"m)[\{\[`"'\r\n]|:\s|,\s|\s#")||RegExMatch(S,"^[\s#\\\-:>]")||RegExMatch(S,"m)\s$")||RegExMatch(S,"m)[\X{7F}-\X{7FFF}]")
       return ('"' C(S) '"')
     else return S
   }
