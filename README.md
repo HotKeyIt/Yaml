@@ -26,3 +26,6 @@ How to use:
 
   Yaml(TextOrFilePath) will result in Array of documents (objects), if you have only one document you can retrieve it directly:
     `YamlObj:=Yaml(TextOrFilePath)[1]`
+
+Notes:
+UMap is only available in AHK_H!!!
